@@ -16,7 +16,6 @@ public class Day1 : MonoBehaviour
         int summedDiff = 0;
         for (var i = 0; i < listOne.Length; i++)
         {
-            int diff = Mathf.Abs(listOne[i] - listTwo[i]);
             summedDiff += Mathf.Abs(listOne[i] - listTwo[i]);
         }
 

@@ -92,21 +92,6 @@ public class Day4 : MonoBehaviour
         return true;
     }
 
-    private void PrintCharArray(char[][] array)
-    {
-        string output = "";
-        for (int i = 0; i < array.Length; i++)
-        {
-            var row = array[i];
-            foreach (var character in row)
-            {
-                output += character;
-            }
-            output += "\n";
-        }
-        Debug.Log(output);
-    }
-
     private char[][] ParseInput()
     {
         var lines = Input.text.Split('\n');

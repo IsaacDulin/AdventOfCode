@@ -136,8 +136,9 @@ GameObject:
   - component: {fileID: 1705523627}
   - component: {fileID: 1705523628}
   - component: {fileID: 1705523629}
+  - component: {fileID: 1705523630}
   m_Layer: 0
-  m_Name: Day1
+  m_Name: Solutions
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -222,7 +223,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54e15dcd64724b649b1cdba093a6b9cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Input: {fileID: 0}
+  Input: {fileID: 4900000, guid: 2afbdef28994f9b428b66e7c369177e1, type: 3}
+--- !u!114 &1705523630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1705523623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a64025046fb27540989eaafa1063b2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Input: {fileID: 4900000, guid: f73e3df98b59e9e4dba385aa6568eba7, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

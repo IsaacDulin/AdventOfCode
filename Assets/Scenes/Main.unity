@@ -139,6 +139,8 @@ GameObject:
   - component: {fileID: 1705523630}
   - component: {fileID: 1705523632}
   - component: {fileID: 1705523631}
+  - component: {fileID: 1705523634}
+  - component: {fileID: 1705523633}
   m_Layer: 0
   m_Name: Solutions
   m_TagString: Untagged
@@ -265,6 +267,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Input: {fileID: 4900000, guid: 71bf1182bfa039e409523aab67b7129c, type: 3}
+--- !u!114 &1705523633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1705523623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c54847e057af3b0418e4a525846d323a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Input: {fileID: 4900000, guid: f1abe9c097d42574f86c3acd3f722249, type: 3}
+  Output: {fileID: 0}
+--- !u!114 &1705523634
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1705523623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b16a2420b234f64da48c2bb4dd6828b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Input: {fileID: 11500000, guid: 1b16a2420b234f64da48c2bb4dd6828b, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -179,7 +179,6 @@ public class Day6 : MonoBehaviour
         {
             if (other.Position == Position && other.Direction == Direction)
             {
-                Debug.Log("Equals: " + other.Position + " " + Position + " " + other.Direction + " " + Direction);
                 return true;
             }
             return false;

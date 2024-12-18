@@ -67,10 +67,15 @@ public class Day17 : MonoBehaviour
             }
         }
 
-
-        // The only op that modifies A is the second-to-last operation where A is divided by 8.
-        // Since A needs to be zero to end the program, and we need 16 loops total to print our output,
-        // 1*(8^15) is a minimum bounds for 
+        // This took some understanding of the instructions. 
+        // - There's only one jump instruction at the end - the instructions will just loop until A = 0
+        // - There's only one print instruction - it prints B - this means the loop needs to run exactly 16 times
+        // - Both B and C registers are immediately overwritten based on the contents of A. There's no persistence in those registers.
+        // - There's only one instruction that modifies A - right before the end A = A / 8.
+        // Using these assumptions, we can find the proper value of A. We know it will be 0 at the end, so on the second to last loop 
+        // it has to be between 1 and 7. If we know A for loop N, then A in loop N-1 has to be one of the 7 values (A*8+(0 to 7)). 
+        // So we work backwards from the end, keeping track of all possible values that could work. Each iteration back adds 8 new values per working value of A.
+        // This space is DRASTICALLY smaller than the bounds of (8^16)-(8^15).
         public long FindProperValueOfA(List<int> instructions)
         {
             List<long> possibilitiesOfA;
@@ -102,8 +107,7 @@ public class Day17 : MonoBehaviour
                     }
                 }
             }
-
-            throw new System.Exception("No valid value of A found");
+            throw new Exception("No valid value of A found");
         }
 
         private List<long> GetNextPossibleValues(long a)
@@ -238,7 +242,7 @@ public class Day17 : MonoBehaviour
                     return RegisterC;
                 case 7:
                 default:
-                    throw new System.Exception("Invalid combo operand 7");
+                    throw new Exception("Invalid combo operand 7");
             }
         }
     }

@@ -16,14 +16,39 @@ public class Day20 : MonoBehaviour
         var maze = new Maze(Input.text);
         List<Path> paths = maze.Solve(new State() { Position = maze.StartPos, StartCheatPos = new Vector2Int(-1, -1), EndCheatPos = new Vector2Int(-1, -1) }, int.MaxValue);
         int baseLineSpeed = paths[0].Count;
-        Debug.Log($"Shortest path: {baseLineSpeed}");
-        List<Path> shortcutPaths = maze.Solve(new State() { Position = maze.StartPos }, baseLineSpeed - REQUIRED_IMPROVEMENT);
-        Debug.Log($"Number of good cheats: {shortcutPaths.Count}");
+        int ct = maze.FindShortcuts(paths[0], 2, REQUIRED_IMPROVEMENT).Count;
+        Debug.Log($"Number of good cheats: {ct}");
     }
 
     [ContextMenu("Run Pt 2")]
     public void RunPt2()
     {
+        var maze = new Maze(Input.text);
+        List<Path> paths = maze.Solve(new State() { Position = maze.StartPos, StartCheatPos = new Vector2Int(-1, -1), EndCheatPos = new Vector2Int(-1, -1) }, int.MaxValue);
+        int baseLineSpeed = paths[0].Count;
+        var shortcuts = maze.FindShortcuts(paths[0], 20, REQUIRED_IMPROVEMENT);
+        Debug.Log($"Number of good cheats {shortcuts.Count}");
+    }
+
+    [ContextMenu("Run Test")]
+    public void RunTest()
+    {
+        var maze = new Maze(Input.text);
+        List<Path> paths = maze.Solve(new State() { Position = maze.StartPos, StartCheatPos = new Vector2Int(-1, -1), EndCheatPos = new Vector2Int(-1, -1) }, int.MaxValue);
+        int baseLineSpeed = paths[0].Count;
+        var shortcuts = maze.FindShortcuts(paths[0], 20, 70);
+        Debug.Log($"Number of good cheats for 70: {shortcuts.Count}");
+        shortcuts = maze.FindShortcuts(paths[0], 20, 72);
+        Debug.Log($"Number of good cheats for 72: {shortcuts.Count}");
+        shortcuts = maze.FindShortcuts(paths[0], 20, 74);
+        Debug.Log($"Number of good cheats for 74: {shortcuts.Count}");
+        shortcuts = maze.FindShortcuts(paths[0], 20, 76);
+        Debug.Log($"Number of good cheats for 76: {shortcuts.Count}");
+
+        foreach (var shortcut in shortcuts)
+        {
+            Debug.Log($"Start: {shortcut.Item1}, End: {shortcut.Item2}");
+        }
     }
 
     public enum MazeItem
@@ -66,8 +91,8 @@ public class Day20 : MonoBehaviour
                     }
                 }
             }
-            Height = _map.Max(x => x.Key.x);
-            Width = _map.Max(x => x.Key.y);
+            Width = _map.Max(x => x.Key.x);
+            Height = _map.Max(x => x.Key.y);
         }
 
         public List<Path> Solve(State startState, int timeToBeat)
@@ -79,6 +104,7 @@ public class Day20 : MonoBehaviour
             queue.Enqueue(startState);
 
             List<Path> bestPaths = new List<Path>();
+            int ct = 0;
             while (queue.Count > 0)
             {
                 State currentState = queue.Dequeue();
@@ -94,9 +120,13 @@ public class Day20 : MonoBehaviour
 
                 foreach (State adjacentState in GetAdjacentStates(currentState))
                 {
-                    int leastCost = shortestPath[currentState].Count + 1;
-                    if (!shortestPath.TryGetValue(adjacentState, out Path path) || path.Count < leastCost)
+                    int newPathLength = shortestPath[currentState].Count + 1;
+                    if (!shortestPath.TryGetValue(adjacentState, out Path path) || newPathLength < path.Count)
                     {
+                        if (newPathLength > timeToBeat)
+                        {
+                            continue;
+                        }
                         // Document the path to this new state
                         var newPath = new Path();
                         newPath.AddRange(shortestPath[currentState]);
@@ -107,9 +137,100 @@ public class Day20 : MonoBehaviour
                         shortestPath[adjacentState] = newPath;
                     }
                 }
+                ct++;
             }
+            Debug.Log("Returned after ct: " + ct);
 
             return bestPaths;
+        }
+
+        public class Shortcut
+        {
+            public Vector2Int Start;
+            public Vector2Int End;
+            public int Length;
+        }
+
+
+        public HashSet<Tuple<Vector2Int, Vector2Int>> FindShortcuts(Path path, int cheatSeconds, int timeToSave)
+        {
+            // Get index along path based on positional states
+            Dictionary<Vector2Int, int> positionByTime = new();
+            for (int i = 0; i < path.Count; i++)
+            {
+                positionByTime[path[i].Position] = i;
+            }
+
+            // Find all good cheats
+            var goodCheats = new HashSet<Tuple<Vector2Int, Vector2Int>>();
+            foreach (var state in path)
+            {
+                var cheatPossibilities = GetCheatPossibilities(state.Position, cheatSeconds + 1);
+                int fromIdx = positionByTime[state.Position];
+                foreach (var cheat in cheatPossibilities)
+                {
+                    int toIdx = positionByTime[cheat.Item2];
+                    int originalDisatnce = path.Count;
+                    int newDistance = path.Count - (toIdx - fromIdx) + GetDistance(state.Position, cheat.Item2);
+                    if (originalDisatnce - newDistance >= timeToSave)
+                    {
+                        goodCheats.Add(cheat);
+                    }
+                }
+            }
+            return goodCheats;
+        }
+
+        public HashSet<Tuple<Vector2Int, Vector2Int>> GetCheatPossibilities(Vector2Int position, int cheatSeconds)
+        {
+            HashSet<Tuple<Vector2Int, Vector2Int>> cheatPossibilities = new HashSet<Tuple<Vector2Int, Vector2Int>>();
+            for (int i = 0; i < cheatSeconds; i++)
+            {
+                for (int j = 0; j < (cheatSeconds - i); j++)
+                {
+                    Vector2Int endPos = new Vector2Int(position.x + i, position.y + j);
+                    if (IsInBounds(endPos))
+                    {
+                        if (_map[endPos] != MazeItem.Wall)
+                        {
+                            cheatPossibilities.Add(new Tuple<Vector2Int, Vector2Int>(position, endPos));
+                        }
+                    }
+
+                    endPos = new Vector2Int(position.x - i, position.y + j);
+                    if (IsInBounds(endPos))
+                    {
+                        if (_map[endPos] != MazeItem.Wall)
+                        {
+                            cheatPossibilities.Add(new Tuple<Vector2Int, Vector2Int>(position, endPos));
+                        }
+                    }
+
+                    endPos = new Vector2Int(position.x + i, position.y - j);
+                    if (IsInBounds(endPos))
+                    {
+                        if (_map[endPos] != MazeItem.Wall)
+                        {
+                            cheatPossibilities.Add(new Tuple<Vector2Int, Vector2Int>(position, endPos));
+                        }
+                    }
+
+                    endPos = new Vector2Int(position.x - i, position.y - j);
+                    if (IsInBounds(endPos))
+                    {
+                        if (_map[endPos] != MazeItem.Wall)
+                        {
+                            cheatPossibilities.Add(new Tuple<Vector2Int, Vector2Int>(position, endPos));
+                        }
+                    }
+                }
+            }
+            return cheatPossibilities;
+        }
+
+        public int GetDistance(Vector2Int pos, Vector2Int pos2)
+        {
+            return Math.Abs(pos.x - pos2.x) + Math.Abs(pos.y - pos2.y);
         }
 
         public List<State> GetAdjacentStates(State state)
@@ -137,7 +258,6 @@ public class Day20 : MonoBehaviour
                         {
                             Position = wall,
                             StartCheatPos = wall,
-
                         };
                         adjacentStates.Add(newState);
                     }
@@ -199,6 +319,11 @@ public class Day20 : MonoBehaviour
 
             return spaces;
         }
+
+        public bool IsInBounds(Vector2Int position)
+        {
+            return position.x >= 0 && position.x <= Width && position.y >= 0 && position.y <= Height;
+        }
     }
 
     public class State : IEquatable<State>
@@ -229,26 +354,40 @@ public class Day20 : MonoBehaviour
 
         public bool Equals(State other)
         {
-            return Position == other.Position && StartCheatPos == other.StartCheatPos && EndCheatPos == other.EndCheatPos;
+            if (other == null)
+                return false;
+
+            return (Position == other.Position) &&
+                   (StartCheatPos.Equals(other.StartCheatPos)) &&
+                   (EndCheatPos.Equals(other.EndCheatPos));
         }
 
         public override bool Equals(object obj)
         {
             if (obj is State other)
             {
-                return other.Position == Position && StartCheatPos == other.StartCheatPos && EndCheatPos == other.EndCheatPos;
+                return Equals(other);
             }
-
             return false;
         }
 
         public override int GetHashCode()
         {
-            return Position.GetHashCode() * 31 + StartCheatPos.GetHashCode() * 17 + EndCheatPos.GetHashCode() * 11;
+            // Handle nullable values properly
+            int hashCode = Position.GetHashCode();
+
+            // Check if StartCheatPos has a value and get its hash code or use a default value
+            hashCode = hashCode * 31 + (StartCheatPos?.GetHashCode() ?? 0);
+
+            // Check if EndCheatPos has a value and get its hash code or use a default value
+            hashCode = hashCode * 17 + (EndCheatPos?.GetHashCode() ?? 0);
+
+            return hashCode;
         }
     }
 
-
+    // This all ended up being unnecessary - we didn't need the cheat state since we found the cheats 
+    // in a postprocess step instead of in the main solver.
     public enum CheatingState
     {
         HasNotCheated,

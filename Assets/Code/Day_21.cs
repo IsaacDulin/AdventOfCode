@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-using Cache = System.Collections.Concurrent.ConcurrentDictionary<(char currentKey, char nextKey, int depth), long>;
+using Cache = System.Collections.Generic.Dictionary<(char currentKey, char nextKey, int depth), long>;
 
 // This is the first time I really got stuck on my own. I had implemented this without a true cost solver under the assumption
 // that the most direct paths would always be the same cost. After not passing the 4th test case, I understood

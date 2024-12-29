@@ -6,7 +6,11 @@ using UnityEngine;
 public class Day24 : MonoBehaviour
 {
     public readonly int NUM_BITS = 45; // 45 in, 46 out
+    public readonly int TEST_CT = 50;
     public TextAsset Input;
+    public Dictionary<string, Wire> WireMap = new Dictionary<string, Wire>();
+    public List<Gate> Gates = new List<Gate>();
+    public List<Wire> SwappedWires = new List<Wire>();
 
     [ContextMenu("Run Pt 1")]
     public void Run()
@@ -15,13 +19,6 @@ public class Day24 : MonoBehaviour
         Gates.Clear();
         ParseInput();
         RunDevice();
-        foreach (var wire in WireMap.Values)
-        {
-            if (wire.Id.StartsWith("z"))
-            {
-                Debug.Log(wire.Id + " " + wire.Value);
-            }
-        }
         Debug.Log("Output: " + GetOutput());
     }
 
@@ -32,54 +29,50 @@ public class Day24 : MonoBehaviour
         WireMap.Clear();
         Gates.Clear();
         ParseInput();
-        AssessDevice();
+        TryFixDevice();
 
-        WireMap.Clear();
-        Gates.Clear();
-        ParseInput();
-
-        for (int i = 0; i < 8; i += 2)
+        // Run some tests
+        bool working = true;
+        for (int i = 0; i < TEST_CT; i++)
         {
-            SwapWires(SwappedWires[i], SwappedWires[i]);
+            working &= TestWorkingDevice();
         }
-
-        for (int i = 0; i < 10; i++)
-        {
-            bool working = TestWorkingDevice();
-            Debug.Log("Test " + i + " " + working);
-        }
+        Debug.Log($"Results of {TEST_CT} tests: " + working);
 
         var swappedwires = SwappedWires.OrderBy(x => x.Id).ToList();
-        Debug.Log("Swapped Wires: " + string.Join(",", swappedwires.Select(x => x.Id)));
+        Debug.Log("Wires that were swapped: " + string.Join(",", swappedwires.Select(x => x.Id)));
     }
 
-    public Dictionary<string, Wire> WireMap = new Dictionary<string, Wire>();
-    public List<Gate> Gates = new List<Gate>();
-    public List<Wire> SwappedWires = new List<Wire>();
-
-    public bool RunDevice()
+    public void RunDevice()
     {
-        List<Gate> gatesToVisit = new List<Gate>(Gates);
         List<Gate> operableGates = Gates.Where(g => g.Inputs.All(w => w.Value != null) && g.Output.Value == null).ToList();
-        gatesToVisit = gatesToVisit.Where(g => !operableGates.Contains(g)).ToList();
-
         while (operableGates.Count() > 0)
         {
             foreach (var gate in operableGates)
             {
                 gate.Operate();
             }
-            operableGates = gatesToVisit.Where(g => g.Inputs.All(w => w.Value != null) && g.Output.Value == null).ToList();
-            gatesToVisit = gatesToVisit.Where(g => !operableGates.Contains(g)).ToList();
+            operableGates = Gates.Where(g => g.Inputs.All(w => w.Value != null) && g.Output.Value == null).ToList();
         }
-
-        return gatesToVisit.Count == 0;
     }
 
     public bool TestWorkingDevice()
     {
-        int x = UnityEngine.Random.Range(0, 100000);
-        int y = UnityEngine.Random.Range(0, 100000);
+        foreach (var wire in WireMap.Values)
+        {
+            wire.Value = null;
+        }
+
+        long maxRange = 1L << NUM_BITS;
+
+        int xPt1 = UnityEngine.Random.Range(0, int.MaxValue);
+        int xPt2 = UnityEngine.Random.Range(0, int.MaxValue);
+        long x = (((long)xPt1 << 32) | (uint)xPt2) % maxRange;
+
+        int yPt1 = UnityEngine.Random.Range(0, int.MaxValue);
+        int yPt2 = UnityEngine.Random.Range(0, int.MaxValue);
+        long y = (((long)yPt1 << 32) | (uint)yPt2) % maxRange;
+
         SetInput(x, y);
         RunDevice();
         return GetOutput() == (x + y);
@@ -120,86 +113,168 @@ public class Day24 : MonoBehaviour
         }
     }
 
+    public void SetInput(long x, long y)
+    {
+        for (int i = 0; i < NUM_BITS; i++)
+        {
+            GetWire('x', i).Value = (x & (1L << i)) != 0;
+            GetWire('y', i).Value = (y & (1L << i)) != 0;
+        }
+    }
+
     public long GetOutput()
     {
-        List<string> outputWires = new List<string>();
-        foreach (var wire in WireMap.Values)
-        {
-            if (wire.Id.StartsWith("z"))
-            {
-                outputWires.Add(wire.Id);
-            }
-        }
-        outputWires = outputWires.OrderBy(x => int.Parse(x.TrimStart('z'))).ToList();
-
         long sum = 0;
-        for (int i = 0; i < outputWires.Count; i++)
+        for (int i = 0; i < NUM_BITS + 1; i++)
         {
-            sum += WireMap[outputWires[i]].Value.Value ? (long)Math.Pow(2, i) : 0;
+            sum += GetWire('z', i).Value.Value ? (long)Math.Pow(2, i) : 0;
         }
         return sum;
     }
 
-
-    public void SetInput(int x, int y)
+    public void TryFixDevice()
     {
-        List<string> inputXWires = new List<string>();
-        List<string> inputYWires = new List<string>();
-
-        foreach (var wire in WireMap.Values)
+        for (int i = 1; i < NUM_BITS; i++)
         {
-            if (wire.Id.StartsWith("x"))
-            {
-                inputXWires.Add(wire.Id);
-            }
-            if (wire.Id.StartsWith("y"))
-            {
-                inputYWires.Add(wire.Id);
-            }
-        }
-
-        for (int i = 0; i < inputXWires.Count; i++)
-        {
-            GetWire(inputXWires[i]).Value = (x & (1 << i)) > 0;
-            GetWire(inputYWires[i]).Value = (y & (1 << i)) > 0;
-        }
-    }
-
-    public Wire GetWire(string Id)
-    {
-        return WireMap[Id];
-    }
-
-    public void AssessDevice()
-    {
-        for (int i = 0; i < NUM_BITS; i++)
-        {
-            if (i == 0) { continue; }
-            Wire carry = FindCarryIn(i);
-            Debug.Log($"Carry in for {i}: " + carry?.Id);
-            Wire carryOut = FindCarryOut(i);
-            Debug.Log($"Carry out for {i}: " + carryOut?.Id);
-            var relevantWires = GetRelevantWires(i).ToList();
-            Debug.Log("Relevant wires: " + string.Join(",", relevantWires));
             if (!BitAdderWorks(i))
             {
-                Debug.Log($"Bit Adder {i} did not work");
-                if (AttemptInternalFix(i))
+                if (TryFixSingleBitAdder(i))
                 {
-                    Debug.Log("INTERNAL FIX SUCCEEDED!");
+                    Debug.Log($"Fixed internal error in bit adder {i}");
                 }
-                else if (AttemptCarryPairingFix(i))
+                else if (TryFixCarryPairing(i))
                 {
-                    Debug.Log("CARRY PAIRING FIX SUCCEEDED!");
+                    Debug.Log($"Fixed carry-pairing error in bit adders {i}/{i + 1}");
+                }
+            }
+        }
+    }
+
+    public bool BitAdderWorks(int idx)
+    {
+        Wire carryIn = FindCarryIn(idx);
+        Wire carryOut = FindCarryOut(idx);
+        return BitAdderWorks(idx, carryIn, carryOut);
+    }
+
+    /// <summary>
+    /// Assumes testing a full bit adder with both carry-in and carry-out
+    /// So this won't work for the first bit, as it doesn't have a carry-in
+    /// </summary>
+    public bool BitAdderWorks(int idx, Wire carryIn, Wire carryOut)
+    {
+        if (carryOut == null || carryIn == null)
+        {
+            return false;
+        }
+
+        Wire inputX = GetWire('x', idx);
+        Wire inputY = GetWire('y', idx);
+        Wire outputZ = GetWire('z', idx);
+
+        // x,y,carry => z, carryout
+        Dictionary<Tuple<bool, bool, bool>, Tuple<bool, bool>> testCases = new()
+        {
+            { new Tuple<bool, bool, bool>(false, false, false), new Tuple<bool, bool>(false, false) },
+            { new Tuple<bool, bool, bool>(false, false, true), new Tuple<bool, bool>(true, false) },
+            { new Tuple<bool, bool, bool>(false, true, false), new Tuple<bool, bool>(true, false) },
+            { new Tuple<bool, bool, bool>(false, true, true), new Tuple<bool, bool>(false, true) },
+            { new Tuple<bool, bool, bool>(true, false, false), new Tuple<bool, bool>(true, false) },
+            { new Tuple<bool, bool, bool>(true, false, true), new Tuple<bool, bool>(false, true) },
+            { new Tuple<bool, bool, bool>(true, true, false), new Tuple<bool, bool>(false, true) },
+            { new Tuple<bool, bool, bool>(true, true, true), new Tuple<bool, bool>(true, true) }
+        };
+
+        foreach (var test in testCases)
+        {
+            ResetAllWires();
+
+            // set inputs
+            inputX.Value = test.Key.Item1;
+            inputY.Value = test.Key.Item2;
+            if (carryIn != null)
+            {
+                carryIn.Value = test.Key.Item3;
+            }
+
+            RunDevice();
+
+            if (outputZ.Value != test.Value.Item1 || carryOut.Value != test.Value.Item2)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public bool TryFixSingleBitAdder(int idx)
+    {
+        Wire carryIn = FindCarryIn(idx);
+        Wire carryOut = FindCarryOut(idx);
+        var relevantWires = GetRelevantWires(idx).Where((x) => !GetWire(x).IsInput() && x != carryIn?.Id).ToList();
+        for (int i = 0; i < relevantWires.Count; i++)
+        {
+            for (int j = i; j < relevantWires.Count; j++)
+            {
+                Wire wireA = GetWire(relevantWires[i]);
+                Wire wireB = GetWire(relevantWires[j]);
+                // No need to switch same wires or input wires
+                if (i == j)
+                {
+                    continue;
+                }
+
+                // Swap the wires
+                SwapWires(wireA, wireB);
+
+                if (BitAdderWorks(idx, carryIn, carryOut))
+                {
+                    // Fix worked! 
+                    SwappedWires.Add(wireA);
+                    SwappedWires.Add(wireB);
+                    return true;
                 }
                 else
                 {
-                    Debug.Log("Fix failed");
+                    SwapWires(wireA, wireB);
                 }
             }
-            Debug.Log("Swapped wires: " + string.Join(",", SwappedWires.Select(x => x.Id)));
         }
+        return false;
     }
+
+    public bool TryFixCarryPairing(int idx)
+    {
+        var relevantAWires = GetRelevantWires(idx).Where((x) => !GetWire(x).IsInput()).ToList();
+        var relevantBWires = (GetRelevantWires(idx + 1)).Where((x) => !GetWire(x).IsInput()).ToList();
+
+        for (int i = 0; i < relevantAWires.Count; i++)
+        {
+            for (int j = 0; j < relevantBWires.Count; j++)
+            {
+                Wire wireA = GetWire(relevantAWires[i]);
+                Wire wireB = GetWire(relevantBWires[j]);
+
+                // Swap the wires
+                SwapWires(wireA, wireB);
+
+                if (BitAdderWorks(idx) && BitAdderWorks(idx + 1))
+                {
+                    // Fix worked! 
+                    SwappedWires.Add(wireA);
+                    SwappedWires.Add(wireB);
+                    return true;
+                }
+                else
+                {
+                    SwapWires(wireA, wireB);
+                }
+            }
+        }
+        return false;
+    }
+
 
     private Wire FindCarryIn(int idx)
     {
@@ -209,11 +284,9 @@ public class Day24 : MonoBehaviour
         HashSet<Wire> visitedWires = new HashSet<Wire>();
         // search forward, checking ancestors of other wires
         Queue<Wire> queue = new Queue<Wire>();
-
         queue.Enqueue(outputZ);
 
-        int ct = 0;
-        while (queue.Count > 0 && ct < 1000)
+        while (queue.Count > 0)
         {
             Wire wire = queue.Dequeue();
             visitedWires.Add(wire);
@@ -235,47 +308,13 @@ public class Day24 : MonoBehaviour
                     }
                 }
             }
-            ct++;
         }
-        Debug.Log("Carry in not found " + ct);
         return null;
     }
 
     private Wire FindCarryOut(int idx)
     {
         return FindCarryIn(idx + 1);
-
-
-        Wire inputX = GetWire('x', idx);
-        Wire inputY = GetWire('y', idx);
-
-        HashSet<Wire> visitedWires = new HashSet<Wire>();
-        // search forward, checking ancestors of other wires
-        Queue<Wire> queue = new Queue<Wire>();
-
-        queue.Enqueue(inputX);
-        queue.Enqueue(inputY);
-
-        while (queue.Count > 0)
-        {
-            Wire wire = queue.Dequeue();
-            visitedWires.Add(wire);
-
-            if (GetAllDescendents(wire).All(x => (!x.IsOutput()) || (x.GetIndex() > idx)))
-            {
-                // First wire that only contains descendents of a higher index is considered the carry
-                return wire;
-            }
-
-            foreach (var gate in Gates)
-            {
-                if (gate.InputIds.Contains(wire.Id))
-                {
-                    queue.Enqueue(gate.Output);
-                }
-            }
-        }
-        return null;
     }
 
     // get all wires that contribute to this wire
@@ -305,99 +344,6 @@ public class Day24 : MonoBehaviour
         return ancestors;
     }
 
-    // Get all wires that are derived from / depend on this wire
-    public HashSet<Wire> GetAllDescendents(Wire wire)
-    {
-
-        HashSet<Wire> descendents = new HashSet<Wire>();
-        Queue<Wire> queue = new Queue<Wire>();
-        queue.Enqueue(wire);
-
-        while (queue.Count > 0)
-        {
-            Wire currentWire = queue.Dequeue();
-            descendents.Add(currentWire);
-
-            foreach (var gate in Gates)
-            {
-                if (gate.InputIds.Contains(currentWire.Id))
-                {
-                    queue.Enqueue(gate.Output);
-                }
-            }
-        }
-
-        return descendents;
-    }
-
-    public bool AttemptInternalFix(int idx)
-    {
-        Wire carryIn = FindCarryIn(idx);
-        Wire carryOut = FindCarryOut(idx);
-        var relevantWires = GetRelevantWires(idx).Where((x) => !GetWire(x).IsInput() && x != carryIn?.Id).ToList();
-        for (int i = 0; i < relevantWires.Count; i++)
-        {
-            for (int j = i; j < relevantWires.Count; j++)
-            {
-                Wire wireA = GetWire(relevantWires[i]);
-                Wire wireB = GetWire(relevantWires[j]);
-                // No need to switch same wires or input wires
-                if (i == j)
-                {
-                    continue;
-                }
-
-                // Swap the wires
-                SwapWires(wireA, wireB);
-
-                if (BitAdderWorks(idx, carryIn, carryOut))
-                {
-                    // Fix worked! 
-                    Debug.Log("Fix succeeded by swapping : " + wireA.Id + ", " + wireB.Id + "!");
-                    SwappedWires.Add(wireA);
-                    SwappedWires.Add(wireB);
-                    return true;
-                }
-                else
-                {
-                    SwapWires(wireA, wireB);
-                }
-            }
-        }
-        return false;
-    }
-
-    public bool AttemptCarryPairingFix(int idx)
-    {
-        var relevantAWires = GetRelevantWires(idx).Where((x) => !GetWire(x).IsInput()).ToList();
-        var relevantBWires = (GetRelevantWires(idx + 1)).Where((x) => !GetWire(x).IsInput()).ToList();
-
-        for (int i = 0; i < relevantAWires.Count; i++)
-        {
-            for (int j = 0; j < relevantBWires.Count; j++)
-            {
-                Wire wireA = GetWire(relevantAWires[i]);
-                Wire wireB = GetWire(relevantBWires[j]);
-
-                // Swap the wires
-                SwapWires(wireA, wireB);
-
-                if (BitAdderWorks(idx) && BitAdderWorks(idx + 1))
-                {
-                    // Fix worked! 
-                    Debug.Log("Fix succeeded by swapping : " + wireA.Id + ", " + wireB.Id + "!");
-                    SwappedWires.Add(wireA);
-                    SwappedWires.Add(wireB);
-                    return true;
-                }
-                else
-                {
-                    SwapWires(wireA, wireB);
-                }
-            }
-        }
-        return false;
-    }
 
     public void SwapWires(Wire wireA, Wire wireB)
     {
@@ -411,6 +357,9 @@ public class Day24 : MonoBehaviour
         gateA.OutputId = wireB.Id;
     }
 
+    /// <summary>
+    /// Gets the wires relevant to a particular bit adder
+    /// </summary>
     public HashSet<string> GetRelevantWires(int idx)
     {
         Wire inputX = GetWire('x', idx);
@@ -477,68 +426,10 @@ public class Day24 : MonoBehaviour
         return relevantWires;
     }
 
-    public bool BitAdderWorks(int idx)
+
+    public Wire GetWire(string Id)
     {
-        Wire carryIn = FindCarryIn(idx);
-        Wire carryOut = FindCarryOut(idx);
-        return BitAdderWorks(idx, carryIn, carryOut);
-    }
-
-    public bool BitAdderWorks(int idx, Wire carryIn, Wire carryOut)
-    {
-        if (carryOut == null || carryIn == null)
-        {
-            return false;
-        }
-
-        Wire inputX = GetWire('x', idx);
-        Wire inputY = GetWire('y', idx);
-        Wire outputZ = GetWire('z', idx);
-
-        // x,y,carry => z, carryout
-        Dictionary<Tuple<bool, bool, bool>, Tuple<bool, bool>> testCases = new()
-        {
-            { new Tuple<bool, bool, bool>(false, false, false), new Tuple<bool, bool>(false, false) },
-            { new Tuple<bool, bool, bool>(false, false, true), new Tuple<bool, bool>(true, false) },
-            { new Tuple<bool, bool, bool>(false, true, false), new Tuple<bool, bool>(true, false) },
-            { new Tuple<bool, bool, bool>(false, true, true), new Tuple<bool, bool>(false, true) },
-            { new Tuple<bool, bool, bool>(true, false, false), new Tuple<bool, bool>(true, false) },
-            { new Tuple<bool, bool, bool>(true, false, true), new Tuple<bool, bool>(false, true) },
-            { new Tuple<bool, bool, bool>(true, true, false), new Tuple<bool, bool>(false, true) },
-            { new Tuple<bool, bool, bool>(true, true, true), new Tuple<bool, bool>(true, true) }
-        };
-
-        if (carryIn == null)
-        {
-            testCases = testCases.Where(x => x.Key.Item3 == false).ToDictionary(x => x.Key, x => x.Value);
-        }
-        // if (carryOut == null)
-        // {
-        //     testCases = testCases.Where(x => x.Value.Item2 == false).ToDictionary(x => x.Key, x => x.Value);
-        // }
-
-        foreach (var test in testCases)
-        {
-            // reset
-            WireMap.Values.ToList().ForEach(x => x.Value = null);
-
-            // set inputs
-            inputX.Value = test.Key.Item1;
-            inputY.Value = test.Key.Item2;
-            if (carryIn != null)
-            {
-                carryIn.Value = test.Key.Item3;
-            }
-
-            RunDevice();
-
-            if (outputZ.Value != test.Value.Item1 || carryOut.Value != test.Value.Item2)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return WireMap[Id];
     }
 
     public Wire GetWire(char c, int idx)
@@ -553,9 +444,17 @@ public class Day24 : MonoBehaviour
         }
     }
 
+    public void ResetAllWires()
+    {
+        WireMap.Values.ToList().ForEach(x => x.Value = null);
+    }
 
     public class Wire
     {
+        public string Id;
+        public bool? Value;
+        public Gate ProvidingGate;
+
         public Wire(string line)
         {
             var parts = line.Split(':');
@@ -570,13 +469,6 @@ public class Day24 : MonoBehaviour
             ProvidingGate = providingGate;
             Value = null;
         }
-
-        public string Id;
-        public bool? Value;
-
-        public int Depth => ProvidingGate != null ? ProvidingGate.Depth : 0;
-
-        public Gate ProvidingGate;
 
         public int GetIndex()
         {
@@ -596,6 +488,20 @@ public class Day24 : MonoBehaviour
 
     public class Gate
     {
+        public enum Mode
+        {
+            And,
+            Or,
+            Xor
+        }
+
+        private Dictionary<string, Wire> _wireMap;
+        private Mode _mode;
+        public List<string> InputIds = new List<string>();
+        public string OutputId;
+        public List<Wire> Inputs => InputIds.Select(x => _wireMap[x]).ToList();
+        public Wire Output => _wireMap[OutputId];
+
         public Gate(string line, Dictionary<string, Wire> wireMap)
         {
             var parts = line.Split("->");
@@ -617,23 +523,6 @@ public class Day24 : MonoBehaviour
             }
             _wireMap = wireMap;
         }
-
-        public enum Mode
-        {
-            And,
-            Or,
-            Xor
-        }
-
-        private Dictionary<string, Wire> _wireMap;
-
-        private Mode _mode;
-        public int Depth => Inputs.Max(x => x.Depth) + 1;
-        public List<string> InputIds = new List<string>();
-        public string OutputId;
-        public List<Wire> Inputs => InputIds.Select(x => _wireMap[x]).ToList();
-        public Wire Output => _wireMap[OutputId];
-
 
         public void Operate()
         {

@@ -15,11 +15,6 @@ public class Day23 : MonoBehaviour
     {
         var nodeLookup = ParseInput(Input.text);
         var clusters = Find3Clusters(nodeLookup, 't');
-
-        foreach (var cluster in clusters)
-        {
-            Debug.Log(" - " + cluster.Item1 + " " + cluster.Item2 + " " + cluster.Item3);
-        }
         Debug.Log("Clusters: " + clusters.Count);
     }
 
@@ -133,7 +128,6 @@ public class Day23 : MonoBehaviour
         {
             if (kvp.Key.StartsWith(lookupChar))
             {
-                Debug.Log("Checking " + kvp.Key);
                 var nodeClusters = Find3Clusters(kvp.Value, lookup);
                 foreach (var cluster in nodeClusters)
                 {
@@ -156,10 +150,8 @@ public class Day23 : MonoBehaviour
                 {
                     foreach (var edge3 in edge2.Edges)
                     {
-                        Debug.Log("Comparing " + node.Id + " " + edge.Id + " " + edge2.Id + " " + edge3.Id);
                         if (edge3.Id == node.Id)
                         {
-                            Debug.Log("Found a cluster containg node: " + node.Id);
                             List<string> clusterElements = new List<string>() {
                                 node.Id, edge.Id, edge2.Id
                             };

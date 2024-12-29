@@ -14,17 +14,9 @@ public class Day25 : MonoBehaviour
     public void Run()
     {
         LockAssessor la = new LockAssessor(Input.text);
-        Debug.Log("Lck count / key count " + la.Locks.Count + " / " + la.Keys.Count);
         int ct = la.CompareAll();
         Debug.Log("Count: " + ct);
     }
-
-    [ContextMenu("Run Pt 2")]
-    public void RunPt2()
-    {
-
-    }
-
 
     public class LockAssessor
     {
@@ -35,7 +27,6 @@ public class Day25 : MonoBehaviour
             var lines = input.Split('\n').Select(x => x.Trim()).ToList();
             for (int i = 0; i < lines.Count; i += 8)
             {
-                Debug.Log("line: " + lines[i]);
                 if (lines[i] == "#####")
                 {
                     Lock lck = new Lock(lines.GetRange(i, 7));
